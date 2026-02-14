@@ -64,6 +64,8 @@ private:
     AnimState anim_state_ = AnimState::None;
     UINT_PTR anim_timer_id_ = 0;
     double anim_progress_ = 0.0;  // 0.0 to 1.0
+    POINT anim_start_pos_ = {0, 0};
+    POINT anim_target_pos_ = {0, 0};
 
     // Animation callback
     std::function<void(ToastWindow*)> anim_complete_callback_;

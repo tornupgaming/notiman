@@ -515,9 +515,52 @@ namespace notiman
         anim_state_ = state;
         anim_complete_callback_ = std::move(on_complete);
         anim_progress_ = 0.0;
+
+        RECT current = {};
+        GetWindowRect(hwnd_, &current);
+        anim_target_pos_.x = current.left;
+        anim_target_pos_.y = current.top;
+
         if (state == AnimState::FadingIn)
         {
+            constexpr int kSlideX = 28;
+            constexpr int kSlideY = 10;
+            int offset_x = 0;
+            int offset_y = 0;
+
+            switch (config_.corner)
+            {
+            case Corner::TopLeft:
+                offset_x = -kSlideX;
+                offset_y = -kSlideY;
+                break;
+            case Corner::TopRight:
+                offset_x = kSlideX;
+                offset_y = -kSlideY;
+                break;
+            case Corner::BottomLeft:
+                offset_x = -kSlideX;
+                offset_y = kSlideY;
+                break;
+            case Corner::BottomRight:
+                offset_x = kSlideX;
+                offset_y = kSlideY;
+                break;
+            }
+
+            anim_start_pos_.x = anim_target_pos_.x + offset_x;
+            anim_start_pos_.y = anim_target_pos_.y + offset_y;
+
+            SetWindowPos(hwnd_, nullptr,
+                         anim_start_pos_.x,
+                         anim_start_pos_.y,
+                         0, 0,
+                         SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
             SetLayeredWindowAttributes(hwnd_, 0, 0, LWA_ALPHA);
+        }
+        else
+        {
+            anim_start_pos_ = anim_target_pos_;
         }
 
         // Start 16ms timer (~60 FPS)
@@ -531,9 +574,37 @@ namespace notiman
 
         anim_progress_ += FRAME_MS / ANIM_DURATION_MS;
 
+        double eased = EaseOutCubic(anim_progress_);
+        BYTE target_opacity = static_cast<BYTE>(config_.opacity * 255);
+
+        if (anim_state_ == AnimState::FadingIn)
+        {
+            const int x = static_cast<int>(std::lround(
+                anim_start_pos_.x + (anim_target_pos_.x - anim_start_pos_.x) * eased));
+            const int y = static_cast<int>(std::lround(
+                anim_start_pos_.y + (anim_target_pos_.y - anim_start_pos_.y) * eased));
+            SetWindowPos(hwnd_, nullptr, x, y, 0, 0,
+                         SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+        }
+
         if (anim_progress_ >= 1.0)
         {
             anim_progress_ = 1.0;
+
+            if (anim_state_ == AnimState::FadingIn)
+            {
+                SetWindowPos(hwnd_, nullptr,
+                             anim_target_pos_.x,
+                             anim_target_pos_.y,
+                             0, 0,
+                             SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+                SetLayeredWindowAttributes(hwnd_, 0, target_opacity, LWA_ALPHA);
+            }
+            else if (anim_state_ == AnimState::FadingOut)
+            {
+                SetLayeredWindowAttributes(hwnd_, 0, 0, LWA_ALPHA);
+            }
+
             StopAnimation();
             if (anim_complete_callback_)
             {
@@ -544,10 +615,7 @@ namespace notiman
             return;
         }
 
-        double eased = EaseOutCubic(anim_progress_);
-
         // Update layered window opacity based on animation state
-        BYTE target_opacity = static_cast<BYTE>(config_.opacity * 255);
         switch (anim_state_)
         {
         case AnimState::FadingIn:
