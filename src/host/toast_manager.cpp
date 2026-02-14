@@ -68,6 +68,31 @@ void ToastManager::DismissToast(ToastWindow* toast) {
     if (it == toasts_.end()) return;
 
     is_animating_ = true;
+    const size_t removed_index = static_cast<size_t>(std::distance(toasts_.begin(), it));
+
+    // Reposition remaining toasts immediately so they move while the dismissed toast fades out.
+    RECT work_area;
+    SystemParametersInfo(SPI_GETWORKAREA, 0, &work_area, 0);
+    for (size_t i = removed_index + 1; i < toasts_.size(); ++i) {
+        auto& moving_toast = toasts_[i];
+
+        std::vector<double> preceding_heights;
+        for (size_t j = 0; j < i; ++j) {
+            if (j == removed_index) continue;
+            preceding_heights.push_back(toasts_[j]->GetHeight());
+        }
+
+        auto target_pos = calculate_position(
+            config_.corner,
+            work_area.right - work_area.left,
+            work_area.bottom - work_area.top,
+            moving_toast->GetWidth(),
+            moving_toast->GetHeight(),
+            static_cast<int>(i - 1),
+            preceding_heights
+        );
+        AnimateToPosition(moving_toast.get(), target_pos);
+    }
 
     // Animate out before removal
     auto* toast_ptr = it->get();
@@ -78,7 +103,6 @@ void ToastManager::DismissToast(ToastWindow* toast) {
                 [t](const auto& ptr) { return ptr.get() == t; });
             if (it != toasts_.end()) {
                 toasts_.erase(it);
-                RepositionAfterRemoval();
             }
             is_animating_ = false;
 

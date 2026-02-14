@@ -564,6 +564,13 @@ namespace notiman
                          SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
             SetLayeredWindowAttributes(hwnd_, 0, 0, LWA_ALPHA);
         }
+        else if (state == AnimState::FadingOut)
+        {
+            constexpr int kCloseSlideY = 16;
+            const int direction = (config_.corner == Corner::TopLeft || config_.corner == Corner::TopRight) ? -1 : 1;
+            anim_start_pos_ = anim_target_pos_;
+            anim_target_pos_.y += direction * kCloseSlideY;
+        }
         else
         {
             anim_start_pos_ = anim_target_pos_;
@@ -605,7 +612,7 @@ namespace notiman
         double eased = EaseOutCubic(anim_progress_);
         BYTE target_opacity = static_cast<BYTE>(config_.opacity * 255);
 
-        if (anim_state_ == AnimState::FadingIn)
+        if (anim_state_ == AnimState::FadingIn || anim_state_ == AnimState::FadingOut)
         {
             const int x = static_cast<int>(std::lround(
                 anim_start_pos_.x + (anim_target_pos_.x - anim_start_pos_.x) * eased));
@@ -630,6 +637,11 @@ namespace notiman
             }
             else if (anim_state_ == AnimState::FadingOut)
             {
+                SetWindowPos(hwnd_, nullptr,
+                             anim_target_pos_.x,
+                             anim_target_pos_.y,
+                             0, 0,
+                             SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
                 SetLayeredWindowAttributes(hwnd_, 0, 0, LWA_ALPHA);
             }
 

@@ -1,18 +1,26 @@
 #pragma once
 #include <string>
 #include <optional>
+#include <vector>
 #include "payload.h"
 
 namespace notiman {
 
 class HookParser {
 public:
-    static std::optional<NotificationPayload> try_parse(const std::string& json_str);
+    static std::optional<NotificationPayload> try_parse(
+        const std::string& json_str,
+        const std::vector<std::string>& ignored_tools = {});
 
 private:
     static std::optional<NotificationPayload> map_notification(const nlohmann::json& root);
-    static std::optional<NotificationPayload> map_post_tool_use(const nlohmann::json& root, const std::string& cwd);
-    static std::optional<NotificationPayload> map_post_tool_use_failure(const nlohmann::json& root);
+    static std::optional<NotificationPayload> map_post_tool_use(
+        const nlohmann::json& root,
+        const std::string& cwd,
+        const std::vector<std::string>& ignored_tools);
+    static std::optional<NotificationPayload> map_post_tool_use_failure(
+        const nlohmann::json& root,
+        const std::vector<std::string>& ignored_tools);
     static std::optional<NotificationPayload> map_stop();
     static std::optional<NotificationPayload> map_subagent_stop(const nlohmann::json& root);
     static std::optional<NotificationPayload> map_session_start(const nlohmann::json& root);

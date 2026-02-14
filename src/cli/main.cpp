@@ -1,6 +1,7 @@
 #include <CLI11/CLI11.hpp>
 #include <iostream>
 #include <string>
+#include <vector>
 #include <Windows.h>
 #include <io.h>      // _isatty
 #include "../shared/payload.h"
@@ -103,6 +104,7 @@ int main(int argc, char** argv) {
     std::string body;
     std::string code;
     std::string icon_str = "info";
+    std::vector<std::string> ignored_tools = {"Glob", "Grep", "Read"};
     int duration = 0;
     int port = 9123;
 
@@ -112,6 +114,9 @@ int main(int argc, char** argv) {
     app.add_option("-i,--icon", icon_str, "Icon type (info/success/warning/error)")
         ->default_str("info");
     app.add_option("-d,--duration", duration, "Auto-dismiss duration in ms");
+    app.add_option("--ignore-tool", ignored_tools, "Tool name to ignore for hook-based notifications (repeatable or comma-separated)")
+        ->delimiter(',')
+        ->default_str("Glob,Grep,Read");
     app.add_option("-p,--port", port, "Host port")
         ->default_str("9123");
 
@@ -122,10 +127,13 @@ int main(int argc, char** argv) {
     std::string stdin_content = read_piped_stdin();
 
     if (!stdin_content.empty() && title.empty() && body.empty()) {
-        auto hook_payload = notiman::HookParser::try_parse(stdin_content);
+        auto hook_payload = notiman::HookParser::try_parse(stdin_content, ignored_tools);
         if (hook_payload.has_value()) {
             payload = std::move(hook_payload.value());
             payload_from_hook = true;
+        } else {
+            // In hook mode, ignore events that do not map to a notification.
+            return 0;
         }
     }
 
