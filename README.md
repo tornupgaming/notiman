@@ -1,6 +1,8 @@
-# Notiman C++ Implementation
+# Notiman
 
-High-performance C++ implementation of Notiman using Win32 APIs and Direct2D.
+High-performance Windows notification manager using Win32 APIs and Direct2D. 
+Written because the default Windows notifications are garbage and don't stack.
+Includes a tiny HTTP proxy server if you want to trigger notifications when one service calls another.
 
 - **No runtime dependencies**
 - **Native Windows integration**
@@ -12,6 +14,9 @@ High-performance C++ implementation of Notiman using Win32 APIs and Direct2D.
   - ~5mb memory usage
 - CLI
   - ~850kb size
+- Proxy
+  - ~650kb size
+  - ~2.5mb memory usage
 
 ## Build
 
@@ -63,6 +68,17 @@ notiman.exe -t "Title" -b "Body text" -i success
 notiman.exe -t "Code Example" -c "int main() { return 0; }"
 ```
 
+### Proxy Usage
+
+Start the proxy host:
+
+```bash
+notiman-proxy.exe
+```
+
+Right click the system tray icon and modify settings.
+Set up the urls to point to based on path.
+
 ## Configuration File
 
 Notiman reads config from:
@@ -94,6 +110,22 @@ Supported keys:
 - `width`: toast width in pixels
 - `accent_color`: hex color (`#RRGGBB`)
 - `opacity`: background opacity (`0.0` to `1.0`)
+
+
+### Proxy Config Example 
+
+```ini
+[proxy]
+host=127.0.0.1
+port=9876
+
+[routes]
+/api = http://localhost:8888
+/auth = http://localhost:9999
+/service3 = http://localhost:6666
+```
+
+Then running `curl http://localhost:9876/api/user/123` will proxy to `http://localhost:8888/user/123`.
 
 ## Agent Support
 
